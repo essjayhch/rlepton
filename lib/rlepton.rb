@@ -1,67 +1,114 @@
 require 'rlepton/version'
 require 'shellwords'
+require 'open3'
+require 'logger'
 
 module RLepton
+  # File to be compressed
   class Image
-     def initialize(binary_path)
-       @@binary_path = binary_path
-     end
+    attr_reader :binary_path
+    def initialize(binary_path)
+      @binary_path = binary_path
 
-     def compress(input_file:, output_file:nil, parameters: {})
-       raise 'Input file not JPEG' unless ::Rlepton::Image.jpeg? input_file
-       raise 'Output file not Lepton' unless ::Rlepton::Image.lep? output_file
+      yield self if block_given?
+    end
 
-       parameters = parameters.join(' ')
-       f_input = Shellwords.escape(input_file)
-       f_output = Shellwords.escape(output_file)
-       return_value = system "#{RLepton::Image.binary_path} #{parameters} #{f_input} #{f_output}"
+    def compress(input_file: nil, output_file: nil, input: nil, parameters: [])
+      puts input_file
+      if self.class.input_file_valid?(input_file)
+        return compress_by_files(input_file,
+                                 output_file,
+                                 parameters)
+      end
+      return comrpess_by_pipes(input, parameters) if input.is_a?(String) && input.jpeg?
+      raise 'Invalid arguments provided'
+    end
 
-       raise 'Compression Exception' unless return_value == 0
+    def decompress(input_file: nil, output_file: nil, parameters: [])
+      puts input_file
+      puts output_file
+      puts parameters.inspect
+    end
 
-       self
-     end
+    protected
 
-     def decompress(input_file:, output_file:nil)
-       raise 'Output file not JPEG' unless ::Rlepton::Image.jpeg? output_file
-       raise 'Input file not Lepton' unless ::Rlepton::Image.lep? input_file
+    def log(message, level = ::Logger::INFO)
+      return unless self.class.logger
 
-       parameters = parameters.join(' ')
-       f_input = Shellwords.escape(input_file)
-       f_output = Shellwords.escape(output_file)
+      case level
+      when ::Logger::INFO
+        self.class.logger.info(message)
+      when ::Logger::ERROR
+        self.class.logger.error(message)
+      when ::Logger::WARN
+        self.class.logger.warn(message)
+      end
+    end
 
-       return_value = system "#{RLepton::Image.binary_path} #{parameters} #{f_input} #{f_output}"
+    def compress_by_files(input_file, output_file, parameters)
+      parameters << input_file
+      parameters << output_file if output_file
 
-       raise 'Compression Exception' unless return_value == 0
+      stdout, stderr, st = execute_by_file(parameters)
+      if st
+        log(stderr)
+        return stdout
+      else
+        log(stderr, Logger::ERROR)
 
-       self
-     end
+        raise 'Compression Excetion'
+      end
+    end
 
-     class << self
-       attr_reader :binary_path
+    def compress_by_pipes(input, parameters)
+      stdout, stderr, st = execute_by_pipe input, parameters
+      if st
+        log.info stderr
+        return stdout
+      else
+        log.error stderr
+        raise 'Compression Exception'
+      end
+    end
 
-       def compressable?(input_file)
-         ::Rlepton::Image.jpeg? input_file
-       end
+    def execute_by_file(parameters)
+      ::Open3.capture3(binary_path, *parameters)
+    end
 
-       protected
+    def execute_by_pipe(input, parameters)
+      parameters << '-'
+      ::Open3.capture3(binary_path, *parameters, stdin_data: input)
+    end
 
-       def lepton?(file_name)
-         ::File.extname(file_name).eql? 'lep'
-       end
+    class << self
+      attr_accessor :logger
+      def input_file_valid?(file)
+        return false unless File.exist?(file)
+        return false unless ::File.open(file, &:jpeg?)
+        true
+      end
 
-       def jpeg?(file_name)
-         mime(file_name) =~ %r(image/jpeg)
-       end
-
-       def mime(file_name)
-         require 'filemagic'
-
-         ::FileMagic.open(:mime) do |fm|
-           fm.file(file_name)
-         end
-       end
-     end
+      def jpeg_string?(str)
+        str.jpeg?
+      end
+    end
   end
-  class InvalidFileType < StandardError
+
+  # Helper function for File and String validataion
+  module JPEGHelper
+    def jpeg?
+      require 'mimemagic'
+      ::MimeMagic.by_magic(self).type =~ %r{image/jpeg}
+    end
   end
+end
+
+# Open class to add jpeg? function
+class File
+ include ::RLepton::JPEGHelper
+end
+
+# Open class to add jpeg? function
+class String
+  include ::RLepton::JPEGHelper
 end

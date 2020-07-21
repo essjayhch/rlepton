@@ -10,5 +10,5 @@ destination = 'test/images/test.lep'
 lepton = '/users/stuartharland/code/lepton/lepton'
 
 RLepton::Image.new(lepton) do |l|
-  l.compress(source, destination)
+  l.compress(input_file: source, output_file: destination)
 end

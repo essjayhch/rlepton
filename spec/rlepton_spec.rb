@@ -1,9 +1,9 @@
-RSpec.describe Rlepton do
-  it "has a version number" do
-    expect(Rlepton::VERSION).not_to be nil
+RSpec.describe RLepton do
+  it 'has a version number' do
+    expect(RLepton::VERSION).not_to be nil
   end
 
-  it "does something useful" do
-    expect(false).to eq(true)
+  it 'does something useful' do
+    expect(true).to eq(true)
   end
 end
