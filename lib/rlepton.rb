@@ -24,13 +24,15 @@ module RLepton
       raise 'Invalid arguments provided'
     end
 
-    def decompress(input_file: nil, output_file: nil, parameters: [])
-      puts input_file
-      puts output_file
-      puts parameters.inspect
+    def decompress(input_file: nil, output_file: nil, input: nil, parameters: [])
+      if self.class.compress_input_file_valid?(input_file)
+        return decompress_by_files(input_file, output_file, parameters)
+      end
+      return decompress_by_pipes(input, parameters) if input.is_a?(String) && input.lep?
+      raise 'Invalid arguments provided'
     end
 
-    protected
+    private
 
     def log(message, level = ::Logger::INFO)
       return unless self.class.logger
@@ -45,6 +47,21 @@ module RLepton
       end
     end
 
+    def decompress_by_files(input_file, output_file, parameters)
+      parameters << input_file
+      parameters << output_file if output_file
+
+      stdout, stderr, st = execute_by_file(parameters)
+      if st
+        log(stderr)
+        return stdout
+      else
+        log(stderr, Logger::ERROR)
+
+        raise 'Decompression Exception'
+      end
+    end
+
     def compress_by_files(input_file, output_file, parameters)
       parameters << input_file
       parameters << output_file if output_file
@@ -56,9 +73,22 @@ module RLepton
       else
         log(stderr, Logger::ERROR)
 
-        raise 'Compression Excetion'
+        raise 'Compression Exception'
       end
     end
+
+    def decompress_by_pipes(input, parameters)
+      stdout, sterr, st = execute_by_pipe input, parameters
+      if st
+        log.info stderr
+        return stdout
+      else
+        log(stderr, Logger::ERROR)
+
+        raise 'Decompression Exception'
+      end
+    end
+
 
     def compress_by_pipes(input, parameters)
       stdout, stderr, st = execute_by_pipe input, parameters
@@ -86,6 +116,10 @@ module RLepton
         return false unless File.exist?(file)
         return false unless ::File.open(file, &:jpeg?)
         true
+      end
+
+      def compress_input_file_valid?(file)
+        return false unless File.exist?(file)
       end
 
       def jpeg_string?(str)

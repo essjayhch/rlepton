@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ['essjayhch@gmail.com']
 
   spec.summary       = 'Ruby Bindings for the dropbox Lepton compression tool'
-  spec.description   = 'Write a longer description or delete this line.'
+  spec.description   = 'Allows the lepton jpeg compression utility to be consumed within Ruby'
   spec.homepage      = 'https://github.com/essjayhch/rlepton'
 
   spec.files         = `git ls-files -z`.split("\x0").reject do |f|
