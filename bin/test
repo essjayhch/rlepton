@@ -2,6 +2,7 @@
 
 require 'bundler/setup'
 require 'rlepton'
+require 'digest'
 
 source = 'test/images/test.jpg'
 
@@ -9,6 +10,32 @@ destination = 'test/images/test.lep'
 
 lepton = '/usr/bin/lepton'
 
+decompressed = 'test/images/test2.jpg'
+
 RLepton::Image.new(lepton) do |l|
   l.compress(input_file: source, output_file: destination)
 end
+
+RLepton::Image.new(lepton) do |l|
+  l.decompress(input_file: destination, output_file: decompressed)
+end
+
+
+puts "Matches - decompressed vs source: #{Digest::SHA256.hexdigest(File.read(source)) == Digest::SHA256.hexdigest(File.read(decompressed))}"
+
+
+lepton_via_pipe = 'test/images/lepton_via_pipe.lep'
+compressed = ''
+source_contents = File.read(source)
+RLepton::Image.new(lepton) do |l|
+  compressed = l.compress(input: source_contents)
+end
+
+puts "Matches: pipe vs file: #{Digest::SHA256.hexdigest(File.read(destination)) == Digest::SHA256.hexdigest(compressed)}"
+
+decompressed_lep = ''
+RLepton::Image.new(lepton) do |l|
+  decompressed_lep = l.decompress(input: compressed)
+end
+
+puts "Matches pipe decompressed vs source: #{Digest::SHA256.hexdigest(source_contents) == Digest::SHA256.hexdigest(decompressed_lep)}"

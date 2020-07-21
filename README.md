@@ -19,8 +19,22 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Lepton is an image compression tool written by dropbox to radically resize JPEG images by manipulating the filters that are used traditionally for JPEG encoding.
+This system is a lossless compression that has proven very effective in shrinking images.
 
+Currently they do not offer a shared library to link against, which has discouraged some from implementing an interface for other languages, however there is some advantage for using this.
+
+To compress a file:
+    require 'rlepton'
+    RLepton::Image.new('/path/to/lepton/binary') do |l|
+      l.compress(input_file: '/path/of/image.jpeg', output_file: '/path/of/compressed/file.lep')
+    end
+
+To decompress a file:
+
+    RLepton::Image.new('/path/to/lepton/binary') do |l|
+      l.depcompress(input_file: '/path/of/image.lep', output_file: '/path/for/uncompressed/file.jpeg')
+    end
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.

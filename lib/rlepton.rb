@@ -14,21 +14,26 @@ module RLepton
     end
 
     def compress(input_file: nil, output_file: nil, input: nil, parameters: [])
-      puts input_file
-      if self.class.input_file_valid?(input_file)
-        return compress_by_files(input_file,
-                                 output_file,
-                                 parameters)
+      begin
+        if self.class.input_file_valid?(input_file)
+          return compress_by_files(input_file,
+                                   output_file,
+                                   parameters)
+        end
+      rescue TypeError
+        return compress_by_pipes(input, parameters) if input.is_a?(String) && input.jpeg?
       end
-      return comrpess_by_pipes(input, parameters) if input.is_a?(String) && input.jpeg?
       raise 'Invalid arguments provided'
     end
 
     def decompress(input_file: nil, output_file: nil, input: nil, parameters: [])
-      if self.class.compress_input_file_valid?(input_file)
-        return decompress_by_files(input_file, output_file, parameters)
+      begin
+        if self.class.compress_input_file_valid?(input_file)
+          return decompress_by_files(input_file, output_file, parameters)
+        end
+      rescue TypeError
+        return decompress_by_pipes(input, parameters) if input.is_a?(String)
       end
-      return decompress_by_pipes(input, parameters) if input.is_a?(String) && input.lep?
       raise 'Invalid arguments provided'
     end
 
@@ -78,9 +83,9 @@ module RLepton
     end
 
     def decompress_by_pipes(input, parameters)
-      stdout, sterr, st = execute_by_pipe input, parameters
+      stdout, stderr, st = execute_by_pipe input, parameters
       if st
-        log.info stderr
+        log(stderr)
         return stdout
       else
         log(stderr, Logger::ERROR)
@@ -93,10 +98,10 @@ module RLepton
     def compress_by_pipes(input, parameters)
       stdout, stderr, st = execute_by_pipe input, parameters
       if st
-        log.info stderr
+        log(stderr)
         return stdout
       else
-        log.error stderr
+        log(stderr, Logger::ERROR)
         raise 'Compression Exception'
       end
     end
@@ -120,6 +125,7 @@ module RLepton
 
       def compress_input_file_valid?(file)
         return false unless File.exist?(file)
+        true
       end
 
       def jpeg_string?(str)
